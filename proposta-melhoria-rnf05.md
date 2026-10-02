@@ -1,4 +1,4 @@
-# Proposta de melhoria do RNF05 — segurança do agente conversacional Swoosh
+# Proposta de melhoria do RNF05, segurança do agente conversacional Swoosh
 
 **Autor:** Gabriel Reis  
 **Componente:** requisito não funcional de segurança (RNF05)  
@@ -13,7 +13,7 @@ O Swoosh é um agente de inteligência artificial conversacional, em texto e voz
 
 O requisito não funcional RNF05, na especificação do projeto, está formulado assim: o sistema deve garantir a segurança das informações por meio de autenticação, autorização baseada em perfis e registro de auditoria das ações realizadas, sem processar dados sensíveis em serviços externos não homologados e sem permitir exclusão de registros do portfólio pela interface conversacional. O critério de aceitação correspondente é que acesso e ações fiquem restritos ao perfil autenticado, com registro de auditoria íntegro (GRUPO 04, 2026).
 
-Essa formulação cobre três controles clássicos — autenticar, autorizar e auditar — e está alinhada à característica de segurança da ISO/IEC 25010:2023, que decompõe segurança em confidencialidade, integridade, não repúdio, responsabilização, autenticidade e resistência (ISO; IEC, 2023). O texto do requisito, porém, descreve a intenção de qualidade sem fixar onde cada controle atua no pipeline conversacional nem como a qualidade será medida. Em engenharia de requisitos, um atributo de qualidade só orienta projeto e teste quando é verificável (SOMMERVILLE, 2019; CHUNG et al., 2000). No estado atual da solução, três lacunas fazem o RNF05 falhar nesse critério.
+Essa formulação cobre três controles clássicos, autenticar, autorizar e auditar, e está alinhada à característica de segurança da ISO/IEC 25010:2023, que decompõe segurança em confidencialidade, integridade, não repúdio, responsabilização, autenticidade e resistência (ISO; IEC, 2023). O texto do requisito, porém, descreve a intenção de qualidade sem fixar onde cada controle atua no pipeline conversacional nem como a qualidade será medida. Em engenharia de requisitos, um atributo de qualidade só orienta projeto e teste quando é verificável (SOMMERVILLE, 2019; CHUNG et al., 2000). No estado atual da solução, três lacunas fazem o RNF05 falhar nesse critério.
 
 **A identidade ainda é local.** A pré-condição do RNF05 assume usuários cadastrados no ambiente corporativo Microsoft (Microsoft Entra ID ou equivalente homologado). A implementação do MVP autentica com senha e token JWT simétrico (HS256) emitido pela própria API. Perfis privilegiados (Diretoria e PMO/GPM) são concedidos por um código de convite compartilhado no cadastro. Esse arranjo prova o controle de sessão no ambiente acadêmico, mas a autenticidade do sujeito continua dependente de um segredo da aplicação e de um convite reutilizável, em vez do diretório corporativo, da autenticação multifator e dos grupos já administrados pelo Metrô (MICROSOFT, 2026).
 
@@ -36,7 +36,7 @@ O RNF05 passa a ser lido com quatro critérios objetivos, medidos em conjunto de
 | Critério | Medida de aceitação |
 |---|---|
 | Autenticidade | Toda sessão de produção origina-se de token emitido pelo Microsoft Entra ID (ou provedor OIDC homologado com o mesmo contrato). Perfis privilegiados exigem autenticação multifator. O cliente não escolhe o próprio perfil. |
-| Confidencialidade | Em 100% dos casos de teste em que o perfil é restrito, a resposta — da consulta estruturada e do RAG — não contém atributos de projeto fora de `usuario_projeto`. A suíte inclui o projeto fora de escopo (Linha 6-Laranja) perguntado por paráfrase, sem citar o nome oficial. |
+| Confidencialidade | Em 100% dos casos de teste em que o perfil é restrito, a resposta, da consulta estruturada e do RAG, não contém atributos de projeto fora de `usuario_projeto`. A suíte inclui o projeto fora de escopo (Linha 6-Laranja) perguntado por paráfrase, sem citar o nome oficial. |
 | Não repúdio | 100% das tentativas, aceitas ou recusadas, geram um registro somente de inserção. A verificação da cadeia de hashes percorre o intervalo auditado sem quebra. O registro aponta os identificadores dos trechos usados na resposta. |
 | Integridade e resistência | Nenhuma intenção de exclusão de registro de portfólio é executada pela interface conversacional. A partir de um limiar de tentativas de manipulação na janela configurada, a sessão deixa de acessar dados até liberação administrativa. Chamadas de saída com conteúdo de portfólio só alcançam destinos da lista de serviços homologados. |
 
@@ -121,7 +121,7 @@ A linha contínua é o caminho da resposta. A linha tracejada é a trilha de aud
 
 **Guardrail de saída.** Relê a resposta pronta e confronta entidades de projeto citadas com a lista autorizada. Se aparecer projeto fora da lista, a resposta é substituída pelo aviso de permissão insuficiente e o evento é auditado como vazamento bloqueado. Também bloqueia padrões de extração do prompt de sistema. É a segunda linha, útil quando o classificador de entrada deixou passar uma formulação nova.
 
-**Trilha de auditoria imutável.** Esquema separado no PostgreSQL. O papel da aplicação tem permissão de `INSERT` e `SELECT`, sem `UPDATE` nem `DELETE`. Cada registro contém: identificador do sujeito no diretório, identificador interno, sessão, carimbo de tempo, ação, recurso, decisão (permitido ou negado), motivo, intenção, hash dos trechos citados e o hash do registro anterior (cadeia SHA-256). O texto integral do prompt fica cifrado com chave distinta da aplicação, para o operador de suporte não ler conversas em claro e para o auditor autorizado ainda poder reconstitui-las — minimização compatível com a LGPD (BRASIL, 2018). Um job diário percorre a cadeia e alerta o painel se algum elo não confere. A tabela `interacao` operacional pode continuar existindo para o histórico de conversa do próprio usuário (RF17); a trilha de auditoria é a fonte usada em prestação de contas.
+**Trilha de auditoria imutável.** Esquema separado no PostgreSQL. O papel da aplicação tem permissão de `INSERT` e `SELECT`, sem `UPDATE` nem `DELETE`. Cada registro contém: identificador do sujeito no diretório, identificador interno, sessão, carimbo de tempo, ação, recurso, decisão (permitido ou negado), motivo, intenção, hash dos trechos citados e o hash do registro anterior (cadeia SHA-256). O texto integral do prompt fica cifrado com chave distinta da aplicação, para o operador de suporte não ler conversas em claro e para o auditor autorizado ainda poder reconstitui-las, minimização compatível com a LGPD (BRASIL, 2018). Um job diário percorre a cadeia e alerta o painel se algum elo não confere. A tabela `interacao` operacional pode continuar existindo para o histórico de conversa do próprio usuário (RF17); a trilha de auditoria é a fonte usada em prestação de contas.
 
 **Painel de segurança.** Evolui o dashboard já restrito a Diretoria e PMO/GPM. Além da categorização de prompts maliciosos, mostra recusas de autorização, bloqueios do guardrail de saída e o estado da cadeia de hashes. Ao ultrapassar o limiar de tentativas na janela, o orquestrador suspende o acesso a dados daquele sujeito e o painel registra quem liberou a conta. A suspensão passa a ser efetivação da política, não só um aviso.
 
@@ -159,7 +159,7 @@ CHUNG, Lawrence; NIXON, Brian A.; YU, Eric; MYLOPOULOS, John. **Non-functional r
 
 GRUPO 04. **Swoosh:** especificação técnica e de negócio do agente conversacional de portfólio. São Paulo: Inteli, 2026. Documento de projeto (RNF05, RF04 e RF18).
 
-INTERNATIONAL ORGANIZATION FOR STANDARDIZATION; INTERNATIONAL ELECTROTECHNICAL COMMISSION. **ISO/IEC 25010:** systems and software engineering — systems and software quality requirements and evaluation (SQuaRE) — product quality model. 2. ed. Geneva: ISO, 2023.
+INTERNATIONAL ORGANIZATION FOR STANDARDIZATION; INTERNATIONAL ELECTROTECHNICAL COMMISSION. **ISO/IEC 25010:** systems and software engineering, systems and software quality requirements and evaluation (SQuaRE), product quality model. 2. ed. Geneva: ISO, 2023.
 
 MICROSOFT. **Microsoft Entra ID documentation.** Redmond, 2026. Disponível em: https://learn.microsoft.com/en-us/entra/identity/. Acesso em: 2 out. 2026.
 
@@ -168,3 +168,8 @@ NATIONAL INSTITUTE OF STANDARDS AND TECHNOLOGY. **Security and privacy controls 
 OWASP. **OWASP top 10 for large language model applications.** Versão 2025. Disponível em: https://genai.owasp.org/llm-top-10/. Acesso em: 2 out. 2026.
 
 SOMMERVILLE, Ian. **Engenharia de software.** 10. ed. São Paulo: Pearson, 2019.
+
+## Declaração de uso de IA
+
+Este documento foi corrigido com a ajuda da IA Claude sonnet 5.5 
+foi também utilizada IA para a escrita do diagrama de arquitetura.
